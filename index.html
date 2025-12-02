@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>蔵 - 防災備蓄アプリ</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 /* ===== フォント ===== */
 body {
@@ -35,18 +35,31 @@ header {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
+/* 蔵ロゴとタイトルのアニメーション */
+@keyframes emphasize {
+    0% { transform: scale(0.9); opacity: 0; text-shadow: none; }
+    50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+    100% { transform: scale(1); opacity: 1; text-shadow: none; }
+}
 header img {
     width: 100px;
     margin-bottom: 12px;
+    transform: scale(0.9);
+    opacity: 0;
+    animation: emphasize 1s ease-out forwards;
+    animation-delay: 0.1s;
 }
-
 header h1 {
     font-size: 2em;
     margin: 0;
     color: #4CAF50;
+    transform: scale(0.9);
+    opacity: 0;
+    animation: emphasize 1s ease-out forwards;
+    animation-delay: 0.3s;
 }
 
-/* ===== 概要カード ===== */
+/* ===== 概要カード (変更なし) ===== */
 .main-content {
     padding: 20px;
     max-width: 640px;
@@ -68,17 +81,20 @@ header h1 {
     font-size: 1.5em;
 }
 
-/* ===== スタートボタン ===== */
+/* ==================================== */
+/* UPDATED: スタートボタンと間隔 */
+/* ==================================== */
 .button-group {
     display: flex;
     justify-content: space-between;
     margin-top: 16px;
     flex-wrap: wrap;
+    gap: 16px; /* ボタン間のギャップを定義 */
 }
 
 .button-group button {
-    flex: 1 1 48%;
-    margin: 8px 0;
+    flex: 1 1 45%;
+    margin: 0;
     padding: 16px 0;
     font-size: 1.25em;
     border: none;
@@ -88,11 +104,26 @@ header h1 {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     transition: all 0.3s ease;
     font-family: "Toppan Headline Gothic", sans-serif;
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* アイコンと文字の間隔 */
 }
 
 .button-group button:hover {
     transform: translateY(-3px) scale(1.03);
 }
+
+/* NEW: ボタンクリック時のアニメーション */
+@keyframes button-press {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1.03); }
+}
+.button-group button.clicked {
+    animation: button-press 0.5s ease-out;
+}
+
 
 /* 平常時ボタン（緑） */
 #normalBtn {
@@ -104,7 +135,7 @@ header h1 {
     background: #f76707;
 }
 
-/* ===== フッター ===== */
+/* ===== フッター (変更なし) ===== */
 footer {
     text-align: center;
     padding: 14px 0;
@@ -112,11 +143,19 @@ footer {
     color: #777;
 }
 
-/* ===== モバイル対応 ===== */
+/* ===== モバイル対応 (NEW: ボタンを縦並びに) ===== */
 @media screen and (max-width: 480px) {
     header h1 { font-size: 1.6em; }
     .card { padding: 16px 18px; }
-    .button-group button { font-size: 1.1em; padding: 14px 0; }
+    .button-group {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .button-group button { 
+        flex: 1 1 100%;
+        font-size: 1.1em; 
+        padding: 14px 0; 
+    }
 }
 </style>
 </head>
@@ -139,8 +178,8 @@ footer {
     </div>
 
     <div class="button-group">
-        <button id="normalBtn">平常時モード</button>
-        <button id="disasterBtn">災害時モード</button>
+        <button id="normalBtn"><i class="fas fa-home"></i> 平常時モード</button>
+        <button id="disasterBtn"><i class="fas fa-exclamation-triangle"></i> 災害時モード</button>
     </div>
 </div>
 
@@ -149,22 +188,31 @@ footer {
 </footer>
 
 <script>
-// フェードアウトしてページ遷移
-function navigateWithFade(url) {
+// 遷移アニメーションの強化
+function navigateWithFade(url, buttonId) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        // ボタンにクリックアニメーションクラスを追加
+        button.classList.add('clicked');
+    }
+    
+    // ボディ全体をフェードアウト
     document.body.classList.remove('fade-in');
     document.body.classList.add('fade-out');
+    
+    // アニメーション完了後にページ遷移
     setTimeout(() => {
         window.location.href = url;
-    }, 500); // CSSのtransition時間に合わせる
+    }, 500); // CSSのtransition時間 (0.5s) に合わせる
 }
 
 // ボタンにイベント
 document.getElementById('normalBtn').addEventListener('click', () => {
-    navigateWithFade('normal.html');
+    navigateWithFade('normal.html', 'normalBtn');
 });
 
 document.getElementById('disasterBtn').addEventListener('click', () => {
-    navigateWithFade('disaster.html');
+    navigateWithFade('disaster.html', 'disasterBtn');
 });
 </script>
 
