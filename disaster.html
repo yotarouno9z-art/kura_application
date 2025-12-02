@@ -4,97 +4,246 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>蔵 - 災害時モード</title>
-<link rel="stylesheet" href="disaster-map.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+/* ============================================== */
+/* CSS変数（カスタムプロパティ）の定義 */
+/* ============================================== */
+:root {
+    --crisis-main: #C62828; /* ディープ・レッド (ヘッダー) */
+    --crisis-alert: #FF5722; /* 警告オレンジ (アクセント) */
+    --crisis-bg: #fffbf0; /* 非常に明るい背景 */
+    --crisis-text: #333;
+    --low-stock-color: #D32F2F; /* 低残量アラート色 */
+}
+
+/* ----- 全体設定 ----- */
 body {
     font-family: "Toppan Headline Gothic","Noto Sans JP",sans-serif;
-    background: #fff3e0;
+    background: var(--crisis-bg);
     margin: 0; padding: 0;
-    color: #333;
+    color: var(--crisis-text);
     scroll-behavior: smooth;
+    opacity: 1;
+    transition: opacity 0.5s ease;
 }
+
+/* ----- 1. ヘッダー (緊急警告) ----- */
 header {
-    background: #D84315;
-    padding: 20px 16px;
+    background: var(--crisis-main);
+    padding: 15px 16px;
     text-align: center;
     color: white;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     position: sticky; top:0; z-index:999;
 }
 header img { width: 100px; margin-bottom: 10px; }
-header h1 { font-size: 2em; margin: 0; font-weight: 700; text-shadow:0 2px 6px rgba(0,0,0,0.3); }
+header h1 { font-size: 2.2em; margin: 0; font-weight: 900; letter-spacing: 1px; text-shadow:0 2px 6px rgba(0,0,0,0.5); }
 
-/* 目次ボタン */
+/* --- 緊急警告バー (点滅アニメーション) --- */
+#emergencyAlert {
+    color: white;
+    background: #FFEB3B; 
+    padding: 8px 15px;
+    margin: 10px auto;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 1.1em;
+    animation: critical-flash 0.7s infinite alternate; 
+    max-width: 90%;
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.7);
+    text-shadow: none;
+}
+@keyframes critical-flash {
+    from { background: #FFEB3B; color: var(--crisis-main); transform: scale(1.0); }
+    to { background: #F44336; color: white; transform: scale(1.02); }
+}
+
+/* ----- 2. 固定ホームボタン ----- (変更なし) */
+#fixedHomeButton {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+}
+#fixedHomeButton button {
+    background: var(--crisis-alert);
+    color: white; border: none; padding: 15px 20px; border-radius: 50px; cursor: pointer;
+    font-weight: bold; font-size: 1.1em; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;
+}
+#fixedHomeButton button:hover { background: #E65100; transform: scale(1.05); }
+
+/* ----- 3. 目次ボタン ----- (変更なし) */
 .toc {
-    display: flex; justify-content: space-around;
-    margin: 16px 0;
-    flex-wrap: wrap;
-    position: sticky; top:90px; background: #fff3e0; padding:8px 0; z-index:998;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex; justify-content: space-around; margin: 16px 0; flex-wrap: wrap;
+    position: sticky; top:87px; background: var(--crisis-bg); padding:8px 0; z-index:998;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 .toc button {
-    background: linear-gradient(135deg,#FF5722,#FF8A65);
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    margin: 4px;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-    transition: all 0.4s ease;
+    background: linear-gradient(135deg,var(--crisis-alert),#FF8A65);
+    color: white; border: none; padding: 10px 16px; border-radius: 12px; cursor: pointer;
+    margin: 4px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.4s ease;
 }
-.toc button:hover { transform: translateY(-3px) scale(1.08) rotateZ(-2deg); }
+.toc button:hover { transform: translateY(-3px) scale(1.08) rotateZ(-1deg); }
 
-/* メインコンテンツ */
+/* ----- 4. カード (情報パネル) ----- (変更なし) */
 .main-content { padding: 0 20px 60px; max-width: 720px; margin: 0 auto; }
-
-/* カード */
 .card {
-    background: linear-gradient(145deg,#fff3e0,#ffe0b2);
+    background: #fff;
     border-radius: 20px;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.2);
+    box-shadow: 0 15px 40px rgba(255, 87, 34, 0.3);
     padding: 28px;
     margin-bottom: 30px;
     opacity: 0;
     transform: translateY(40px);
     transition: all 0.8s ease-out;
     position: relative;
+    border: 2px solid var(--crisis-alert);
+    border-left: 8px solid var(--crisis-alert);
 }
-.card h2 { color: #E64A19; margin-top: 0; font-size: 1.75em; display: flex; align-items: center; gap:10px; text-shadow:0 1px 3px rgba(0,0,0,0.2); }
-.card p { margin: 12px 0 0; line-height: 1.6; color: #555; }
-#map { width: 100%; height: 450px; border-radius: 16px; margin-top: 12px; }
-
-/* メーター */
-.meter-container { margin:6px 0; }
-.meter-label { font-size:0.85em; color:#333; margin-bottom:2px; }
-.meter {
-    height: 20px;
-    background: #eee;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 8px;
+.card h2 { 
+    color: var(--crisis-main); margin-top: 0; font-size: 1.75em; display: flex; align-items: center; gap:10px; 
+    border-bottom: 3px solid #FFCC80; padding-bottom: 5px;
 }
-.meter > span {
-    display: block;
-    height: 100%;
-    width: 0%;
-    border-radius: 12px;
-    transition: width 1.2s ease-in-out;
-}
-.meter-stock > span { background: #4CAF50; } /* 緑：備蓄 */
-.meter-power > span { background: #FF9800; } /* オレンジ：電源 */
-
-/* フェードイン */
 .card.visible { opacity:1; transform: translateY(0); }
 
-@media screen and (max-width: 480px){
-    header h1 { font-size: 1.6em; }
-    .card { padding: 20px; }
-    .card h2 { font-size: 1.5em; }
+/* ----- マップと凡例の配置 (変更なし) ----- */
+.map-container-wrapper {
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 15px;
+    margin-top: 15px;
+}
+#map { 
+    flex: 2; 
+    min-width: 300px;
+    height: 450px; 
+    border-radius: 16px; 
+    border: 3px solid var(--crisis-main); 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+#map-legend {
+    flex: 1; 
+    min-width: 250px; 
+    background: #fff8e1; 
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid var(--crisis-alert);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+#map-legend h3 {
+    margin-top: 0;
+    color: var(--crisis-alert);
+    border-bottom: 2px solid #FFCC80;
+    padding-bottom: 5px;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.legend-item span {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 10px;
+    border: 1px solid #777;
+}
+
+/* ----- ゲージ表示の共通スタイル (ポップアップ内) ----- */
+.meter-container { margin: 8px 0; }
+.meter-label { font-size: 0.9em; font-weight: bold; color: var(--crisis-text); margin-bottom: 4px; }
+.meter {
+    height: 18px; 
+    background: #eee; 
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); 
+}
+.meter span {
+    display: block;
+    height: 100%;
+    line-height: 18px;
+    text-align: right;
+    padding-right: 8px;
+    color: white;
+    font-size: 0.8em;
+    font-weight: bold;
+    transition: width 1s ease-out; 
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* 備蓄 (Stock) - 緑 */
+.meter-stock span { background: #4CAF50; }
+/* 電源 (Power) - オレンジ */
+.meter-power span { background: #FF9800; }
+/* 低残量 (Critical Low) - 赤 */
+.low-fill span { 
+    background: var(--low-stock-color) !important; 
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); 
+}
+
+/* ==================================== */
+/* NEW: 状況リスト 緊急バッジ */
+/* ==================================== */
+.status-badges {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+.emergency-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: bold;
+    color: white;
+    background-color: #66BB6A; /* 初期色: 緑 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.emergency-badge.power-badge {
+    background-color: #FFB300; /* 初期色: オレンジ */
+}
+.emergency-badge.low {
+    background-color: var(--low-stock-color); /* 赤色 */
+    animation: low-stock-pulse-small 1s infinite alternate; /* 点滅 */
+}
+
+@keyframes low-stock-pulse-small {
+    from { box-shadow: 0 0 4px var(--low-stock-color); }
+    to { box-shadow: 0 0 10px #F44336; }
+}
+
+/* ----- 状況リストアイテム (アラート強調) ----- */
+.list-item-status {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #fff8e1;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    border-left: 5px solid var(--crisis-alert);
+}
+.list-item-status.critical-low {
+    background: #FFCDD2; 
+    border-color: var(--low-stock-color);
+    animation: low-stock-pulse 1s infinite alternate; 
+    transform-origin: center;
+}
+@keyframes low-stock-pulse {
+    from { transform: scale(1); box-shadow: 0 0 5px var(--low-stock-color); }
+    to { transform: scale(1.01); box-shadow: 0 0 15px #F44336; }
+}
+
+/* ----- メディアクエリ (スマートフォン対応) ----- */
+@media screen and (max-width: 768px){
+    .map-container-wrapper { flex-direction: column; }
+    #map, #map-legend { min-width: 100%; flex: auto; }
     #map { height: 350px; }
+    header h1 { font-size: 1.8em; }
+    #emergencyAlert { font-size: 1em; padding: 6px 10px; }
+    .card { padding: 20px; }
 }
 </style>
 </head>
@@ -102,121 +251,192 @@ header h1 { font-size: 2em; margin: 0; font-weight: 700; text-shadow:0 2px 6px r
 
 <header>
     <img src="kura_image.png" alt="蔵ロゴ">
-    <h1>災害発生！近くの蔵を確認</h1>
+    <h1>災害発生！緊急マップ</h1>
+    <div id="emergencyAlert"><i class="fas fa-exclamation-circle"></i> 命を守るため、ハザードと備蓄状況を最優先で確認してください</div>
 </header>
 
 <div class="toc">
     <button onclick="scrollToCard('mapcard')"><i class="fas fa-map-marked-alt"></i> 蔵マップ</button>
-    <button onclick="scrollToCard('status')"><i class="fas fa-tachometer-alt"></i> 備蓄状況</button>
+    <button onclick="scrollToCard('status')"><i class="fas fa-tachometer-alt"></i> 備蓄状況リスト</button>
 </div>
 
 <div class="main-content">
     <div class="card" id="mapcard">
-        <h2><i class="fas fa-map-marked-alt"></i> 蔵マップ</h2>
-        <p>災害時、解放されている蔵の位置やハザード情報を確認できます。マーカーをクリックすると備蓄・電源メーターを表示。</p>
-        <div id="map"></div>
+        <h2><i class="fas fa-map-marked-alt"></i> 蔵マップ（避難経路）</h2>
+        <p>災害時、解放されている蔵の位置やハザード情報（アイコン参照）を確認できます。</p>
+        
+        <div class="map-container-wrapper">
+            <div id="map"></div>
+            
+            <div id="map-legend">
+                <h3><i class="fas fa-map-pin"></i> ハザードマップ凡例</h3>
+                <div class="legend-item">
+                    <span style="background-color:#00B0FF; opacity: 0.4; border-color:#00B0FF;"></span>
+                    <p><i class="fas fa-water" style="color:#00B0FF;"></i> 洪水浸水想定区域</p>
+                </div>
+                <div class="legend-item">
+                    <span style="background-color:#FF7043; opacity: 0.6; border-color:#FF7043;"></span>
+                    <p><i class="fas fa-mountain" style="color:#FF7043;"></i> 土砂災害警戒区域</p>
+                </div>
+                <div class="legend-item">
+                    <span style="background-color:#673AB7; opacity: 0.2; border-color:#673AB7;"></span>
+                    <p><i class="fas fa-ship" style="color:#673AB7;"></i> 津波浸水想定区域</p>
+                </div>
+                
+                <h3><i class="fas fa-chart-bar"></i> 蔵の状況メーター凡例</h3>
+                <div class="legend-item">
+                    <span style="background-color:#4CAF50; border-color:#4CAF50;"></span>
+                    <p>備蓄残量（緑）</p>
+                </div>
+                <div class="legend-item">
+                    <span style="background-color:#FF9800; border-color:#FF9800;"></span>
+                    <p>電源残量（オレンジ）</p>
+                </div>
+                <div class="legend-item">
+                    <span style="background-color:var(--low-stock-color); border-color:var(--low-stock-color);"></span>
+                    <p>残量少アラート（30%未満で<b style="color:var(--low-stock-color);">赤色</b>表示）</p>
+                </div>
+            </div>
+        </div>
     </div>
-
+    
     <div class="card" id="status">
-        <h2><i class="fas fa-tachometer-alt"></i> 蔵状況リスト</h2>
+        <h2><i class="fas fa-exclamation-triangle"></i> 近くの蔵状況リスト</h2>
+        <p>（<span style="color:var(--low-stock-color); font-weight:bold;">点滅</span>は備蓄または電源が30%未満の蔵です。優先度を下げてください）</p>
         <div id="storeList"></div>
     </div>
 </div>
 
+<div id="fixedHomeButton">
+    <button onclick="navigateHome()"><i class="fas fa-home"></i> HOME</button>
+</div>
 <footer>&copy; 2025 蔵アプリ All Rights Reserved.</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// スクロールアニメーション
+// ----- ページ遷移アニメーション、スクロール、カードアニメーション (変更なし) -----
+function navigateHome() {
+    document.body.style.opacity = 0;
+    setTimeout(() => { window.location.href = 'index.html'; }, 500);
+}
 function scrollToCard(id){
     const target = document.getElementById(id);
-    const startPos = window.pageYOffset;
-    const targetPos = target.getBoundingClientRect().top + startPos - 80;
-    const distance = targetPos - startPos;
-    let startTime = null;
-    function animation(currentTime){
-        if(startTime === null) startTime = currentTime;
-        const timeElapsed = currentTime - startTime;
-        const run = easeInOutCubic(timeElapsed, startPos, distance, 700);
-        window.scrollTo(0,run);
-        if(timeElapsed < 700) requestAnimationFrame(animation);
-    }
-    function easeInOutCubic(t,b,c,d){
-        t/=d/2;
-        if(t<1) return c/2*t*t*t + b;
-        t-=2;
-        return c/2*(t*t*t+2)+b;
-    }
-    requestAnimationFrame(animation);
+    window.scrollTo({ top: target.offsetTop - 130, behavior: 'smooth' });
 }
-
-// カードフェードイン
 function animateCards(){
     const cards = document.querySelectorAll('.card');
     cards.forEach((card,i)=>{
         setTimeout(()=>{ card.classList.add('visible'); }, i*300);
     });
 }
-animateCards();
 
-// ----- マップ -----
+// ----- マップとデータ -----
 var map = L.map('map').setView([35.6935,139.7330],16);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-// ハザードエリア例（半透明）
-var hazardLayer = L.layerGroup().addTo(map);
-var hazardAreas = [
-    L.polygon([[35.6927,139.7324],[35.6927,139.7334],[35.6934,139.7334],[35.6934,139.7324]], {color:'#FF3D00', fillColor:'#FF3D00', fillOpacity:0.3}),
-    L.polygon([[35.6938,139.7330],[35.6938,139.7340],[35.6944,139.7340],[35.6944,139.7330]], {color:'#FF3D00', fillColor:'#FF3D00', fillOpacity:0.3})
-];
-hazardAreas.forEach(a=>hazardLayer.addLayer(a));
-
-// 蔵情報
 var stores = [
     { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, stock: 80, power: 60 },
-    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 45, power: 90 },
-    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 50 }
+    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 25, power: 90 }, 
+    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 15 } 
 ];
-
-// 現在位置
 var currentLat = 35.6935, currentLng = 139.7330;
-const userMarker = L.marker([currentLat,currentLng], {
+L.marker([currentLat,currentLng], {
     icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:22px;transform:rotate(0deg);"></i>'})
 }).addTo(map).bindPopup("あなたの現在位置");
 
+// ----- NEW: ハザードマップのアイコンとポリゴン -----
+
+// 1. ハザード多角形（エリア）の定義 (変更なし)
+var hazardLayer = L.layerGroup().addTo(map);
+var floodZone = L.polygon([
+    [35.6950, 139.7300], [35.6970, 139.7320], [35.6940, 139.7340], [35.6920, 139.7320]
+], { color: '#00B0FF', fillColor: '#00B0FF', fillOpacity: 0.4, weight: 1 }).bindPopup("洪水浸水想定区域");
+hazardLayer.addLayer(floodZone);
+var sedimentArea = L.polygon([
+    [35.6920, 139.7360], [35.6940, 139.7370], [35.6950, 139.7350], [35.6930, 139.7340]
+], { color: '#FF7043', fillColor: '#FF7043', fillOpacity: 0.6, weight: 2 }).bindPopup("土砂災害警戒区域");
+hazardLayer.addLayer(sedimentArea);
+var tsunamiZone = L.polygon([
+    [35.6910, 139.7310], [35.6930, 139.7300], [35.6900, 139.7330]
+], { color: '#673AB7', fillColor: '#673AB7', fillOpacity: 0.2, weight: 1 }).bindPopup("津波浸水想定区域");
+hazardLayer.addLayer(tsunamiZone);
+
+// 2. NEW: ハザードアイコンの追加（エリアの中心付近に配置）
+L.marker([35.6942, 139.7320], {
+    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-water" style="color:#00B0FF; font-size:30px;"></i>', iconSize: [30, 30]})
+}).addTo(map).bindPopup("洪水危険！");
+
+L.marker([35.6940, 139.7355], {
+    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-mountain" style="color:#FF7043; font-size:30px;"></i>', iconSize: [30, 30]})
+}).addTo(map).bindPopup("土砂災害危険！");
+
+L.marker([35.6918, 139.7315], {
+    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-ship" style="color:#673AB7; font-size:30px;"></i>', iconSize: [30, 30]})
+}).addTo(map).bindPopup("津波危険！");
+// ------------------------------------
+
 // 蔵マーカー＋ルート＋クリックでメーター表示
 stores.forEach(s=>{
+    const stockClass = s.stock < 30 ? 'low-fill' : '';
+    const powerClass = s.power < 30 ? 'low-fill' : '';
+    const isCritical = s.stock < 30 || s.power < 30;
+
+    const popupContent = `<b>${s.name}</b><br>距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m
+    <hr style="margin:5px 0;">
+    ${isCritical ? '<p style="color:var(--low-stock-color); font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> 要注意: 残量不足</p>' : ''}
+    <div class="meter-container">
+        <div class="meter-label"><i class="fas fa-box"></i> 備蓄残量</div>
+        <div class="meter meter-stock ${stockClass}">
+            <span style="width:0%" data-width="${s.stock}">${s.stock}%</span>
+        </div>
+    </div>
+    <div class="meter-container">
+        <div class="meter-label"><i class="fas fa-bolt"></i> 電源残量</div>
+        <div class="meter meter-power ${powerClass}">
+            <span style="width:0%" data-width="${s.power}">${s.power}%</span>
+        </div>
+    </div>`;
+
     const marker = L.marker([s.lat,s.lng]).addTo(map)
-    .bindPopup(`<b>${s.name}</b><br>距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m
-    <div class="meter-container"><div class="meter-label">備蓄残量</div><div class="meter meter-stock"><span style="width:0%" data-width="${s.stock}"></span></div></div>
-    <div class="meter-container"><div class="meter-label">電源残量</div><div class="meter meter-power"><span style="width:0%" data-width="${s.power}"></span></div></div>`);
-
-    marker.on('click',()=>{
-        const meters = marker.getPopup().getElement().querySelectorAll('.meter span');
-        meters.forEach(m=>{
-            m.style.width = m.dataset.width+'%';
-        });
+    .bindPopup(popupContent);
+    marker.on('popupopen', (e)=>{
+        // ポップアップが開いたときにゲージをアニメーションさせる
+        const meters = e.popup.getElement().querySelectorAll('.meter span');
+        meters.forEach(m=>{ m.style.width = m.dataset.width+'%'; });
     });
-
     animatePolyline([[currentLat,currentLng],[s.lat,s.lng]]);
 });
 
-// 下部リスト（距離順）
-const storeList = document.getElementById('storeList');
-stores.sort((a,b)=>computeDistance(currentLat,currentLng,a.lat,a.lng)-computeDistance(currentLat,currentLng,b.lat,b.lng));
-stores.forEach(s=>{
-    const dist = computeDistance(currentLat,currentLng,s.lat,s.lng);
-    const div = document.createElement('div');
-    div.style.marginBottom='12px';
-    div.style.padding='6px';
-    div.style.background='#fff3e0';
-    div.style.borderRadius='12px';
-    div.style.boxShadow='0 3px 10px rgba(0,0,0,0.12)';
-    div.innerHTML = `<b>${s.name}</b> - 距離: ${dist}m`;
-    storeList.appendChild(div);
-});
+// 下部リスト（距離順・緊急強調）
+function renderStoreList() {
+    const storeList = document.getElementById('storeList');
+    storeList.innerHTML = '';
+    stores.sort((a,b)=>computeDistance(currentLat,currentLng,a.lat,b.lng)-computeDistance(currentLat,currentLng,b.lat,b.lng));
+    
+    stores.forEach(s=>{
+        const dist = computeDistance(currentLat,currentLng,s.lat,s.lng);
+        const isCritical = s.stock < 30 || s.power < 30;
+        
+        // NEW: バッジクラスの決定
+        const badgeStockClass = s.stock < 30 ? 'emergency-badge low' : 'emergency-badge stock-badge';
+        const badgePowerClass = s.power < 30 ? 'emergency-badge low' : 'emergency-badge power-badge';
 
-// 距離計算
+        const div = document.createElement('div');
+        div.classList.add('list-item-status');
+        if (isCritical) {
+            div.classList.add('critical-low');
+        }
+
+        div.innerHTML = `<b>${s.name}</b> - 距離: ${dist}m<br>
+                        <div class="status-badges">
+                            <span class="${badgeStockClass}"><i class="fas fa-box"></i> 備蓄: ${s.stock}%</span>
+                            <span class="${badgePowerClass}"><i class="fas fa-bolt"></i> 電源: ${s.power}%</span>
+                        </div>`;
+        storeList.appendChild(div);
+    });
+}
+
+// 距離計算 (変更なし)
 function computeDistance(lat1,lng1,lat2,lng2){
     var R = 6371000;
     var dLat = (lat2-lat1)*Math.PI/180;
@@ -226,9 +446,9 @@ function computeDistance(lat1,lng1,lat2,lng2){
     return Math.round(R*c);
 }
 
-// ポリラインアニメーション
+// ポリラインアニメーション (変更なし)
 function animatePolyline(latlngs){
-    let line = L.polyline([latlngs[0]],{color:'#FF9800',weight:4,opacity:0.7,dashArray:'10,6'}).addTo(map);
+    let line = L.polyline([latlngs[0]],{color: 'var(--crisis-alert)', weight:4, opacity:0.7, dashArray:'10,6'}).addTo(map);
     let steps = 60;
     let i=1;
     function step(){
@@ -241,6 +461,12 @@ function animatePolyline(latlngs){
     }
     step();
 }
+
+// 初期処理
+document.addEventListener('DOMContentLoaded', () => {
+    renderStoreList();
+    animateCards();
+});
 </script>
 </body>
 </html>
