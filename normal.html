@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>蔵 - 平常時モード</title>
-<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -16,6 +15,9 @@ body {
     color: #333;
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* フェードアニメーション用 */
+    opacity: 1;
+    transition: opacity 0.5s ease;
 }
 header {
     background: #fff;
@@ -25,6 +27,46 @@ header {
 }
 header img { width: 100px; margin-bottom: 10px; }
 header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
+
+/* ----- 日付と挨拶バー (新規追加) ----- */
+#dateGreeting {
+    text-align: center;
+    padding: 10px 16px;
+    background: #e6ffe6; /* 薄いグリーン */
+    color: #2E7D32;
+    font-weight: bold;
+    font-size: 1em;
+    border-bottom: 2px solid #81C784;
+}
+
+/* ----- 固定ホームボタン (画面右下) ----- */
+#fixedHomeButton {
+    position: fixed; /* 画面に固定 */
+    bottom: 20px;    /* 画面下端から20px */
+    right: 20px;     /* 画面右端から20px */
+    z-index: 1000;   /* 他の要素より手前に表示 */
+}
+
+#fixedHomeButton button {
+    background: #4CAF50; /* 平常時テーマカラー (緑) */
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 50px; /* 丸いボタンにする */
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3); /* 立体的な影 */
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#fixedHomeButton button:hover {
+    background: #388E3C;
+    transform: scale(1.05);
+}
 
 /* ----- 目次ボタン ----- */
 .toc {
@@ -94,6 +136,10 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
 
 /* ----- メディア ----- */
 @media screen and (max-width: 480px) {
+    #fixedHomeButton button {
+        padding: 12px 16px;
+        font-size: 1em;
+    }
     header h1 { font-size: 1.6em; }
     .card { padding: 20px; }
     .card h2 { font-size: 1.5em; }
@@ -108,6 +154,8 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
     <h1>平常時モード</h1>
 </header>
 
+<div id="dateGreeting"></div>
+
 <div class="toc">
     <button onclick="scrollToCard('smartkey')"><i class="fas fa-key"></i> スマートキー</button>
     <button onclick="scrollToCard('lounge')"><i class="fas fa-calendar-check"></i> ラウンジ予約</button>
@@ -116,14 +164,12 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
 </div>
 
 <div class="main-content">
-    <!-- スマートキー -->
     <div class="card" id="smartkey">
         <h2><i class="fas fa-key"></i> スマートキー</h2>
         <p>空き家のドアノブにスマホを近づけてロックを解除。</p>
         <button onclick="unlockDoor(this)"><i class="fas fa-door-open"></i> 解錠</button>
     </div>
 
-    <!-- ラウンジ予約 -->
     <div class="card" id="lounge">
         <h2><i class="fas fa-calendar-check"></i> ラウンジ予約</h2>
         <p>利用日、時間、蔵の場所を指定して予約できます。</p>
@@ -139,14 +185,12 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
         <button onclick="reserveLounge()">予約する</button>
     </div>
 
-    <!-- 情報マップ -->
     <div class="card" id="mapcard">
         <h2><i class="fas fa-map-marked-alt"></i> 情報マップ</h2>
-        <p>近隣の蔵の場所を確認できます。</p>
+        <p>近隣の蔵の場所と利用状況を確認できます。</p>
         <div id="map"></div>
     </div>
 
-    <!-- ポイント履歴 -->
     <div class="card" id="points">
         <h2><i class="fas fa-star"></i> ポイント履歴</h2>
         <p>現在のポイント: <span id="currentPoints">120</span>pt</p>
@@ -156,13 +200,41 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
 
 <footer>&copy; 2025 蔵アプリ All Rights Reserved.</footer>
 
+<div id="fixedHomeButton">
+    <button onclick="navigateHome()"><i class="fas fa-home"></i> HOME</button>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// ----- 日付と挨拶表示 (新規追加) -----
+function displayDateGreeting() {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const greetingElement = document.getElementById('dateGreeting');
+    
+    greetingElement.innerHTML = `
+        <i class="far fa-calendar-alt"></i> 
+        今日は${month}月${day}日です。今日も一日頑張りましょう！
+    `;
+}
+// ページロード時に実行
+displayDateGreeting();
+
+// ----- ページ遷移アニメーション -----
+function navigateHome() {
+    document.body.style.opacity = 0;
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 500);
+}
+
 // ----- 目次スクロール -----
 function scrollToCard(id){
     const target = document.getElementById(id);
+    // 日付バーとヘッダーの高さ分を考慮してスクロール位置を調整
+    const offset = 80; 
     const startPos = window.pageYOffset;
-    const targetPos = target.getBoundingClientRect().top + startPos - 20;
+    const targetPos = target.getBoundingClientRect().top + startPos - offset;
     const distance = targetPos - startPos;
     let startTime = null;
     function animation(currentTime){
@@ -217,11 +289,11 @@ function reserveLounge(){
 var map = L.map('map').setView([35.6935,139.7330],16);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-// 蔵情報
+// 蔵情報（設備と混雑人数）
 var stores = [
-    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, stock: 80, power: 60 },
-    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 45, power: 90 },
-    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 50 }
+    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, facilities: ['Wi-Fi', 'カフェ', 'ボードゲーム'], crowd: 5 },
+    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, facilities: ['Wi-Fi', '自習スペース', 'トイレ'], crowd: 2 },
+    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, facilities: ['キッチン', '休憩スペース'], crowd: 12 }
 ];
 
 // 現在位置
@@ -230,12 +302,37 @@ const userMarker = L.marker([currentLat,currentLng], {
     icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:20px;transform:rotate(0deg);"></i>'})
 }).addTo(map).bindPopup("あなたの現在位置");
 
-// 蔵マーカー＋ルート＋備蓄表示
+// 蔵マーカー＋ルート＋情報表示
 stores.forEach(s=>{
+    // 設備アイコンを生成
+    const facilityIcons = s.facilities.map(f => {
+        let icon;
+        if (f === 'Wi-Fi') icon = '<i class="fas fa-wifi" title="Wi-Fi"></i>';
+        else if (f === 'カフェ') icon = '<i class="fas fa-coffee" title="カフェ"></i>';
+        else if (f === 'ボードゲーム') icon = '<i class="fas fa-dice" title="ボードゲーム"></i>';
+        else if (f === '自習スペース') icon = '<i class="fas fa-book" title="自習スペース"></i>';
+        else if (f === 'キッチン') icon = '<i class="fas fa-utensils" title="キッチン"></i>';
+        else if (f === 'トイレ') icon = '<i class="fas fa-toilet" title="トイレ"></i>';
+        else if (f === '休憩スペース') icon = '<i class="fas fa-chair" title="休憩スペース"></i>';
+        else icon = '<i class="fas fa-wrench"></i>';
+        return `<span style="margin: 0 3px;">${icon}</span>`;
+    }).join('');
+
+    // 混雑度に応じた色を設定
+    const crowdColor = s.crowd > 10 ? 'red' : s.crowd > 5 ? 'orange' : '#4CAF50'; // 緑
+
+    const popupContent = `
+        <b>${s.name}</b><br>
+        距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m<br>
+        <hr style="margin:5px 0;">
+        <i class="fas fa-users" style="color:${crowdColor};"></i> 混雑人数: <span style="font-weight:bold; color:${crowdColor};">${s.crowd}名</span><br>
+        <i class="fas fa-concierge-bell"></i> 設備: ${facilityIcons}
+    `;
+
     L.marker([s.lat,s.lng]).addTo(map)
-    .bindPopup(`<b>${s.name}</b><br>距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m
-    <br>備蓄残量: ${s.stock}%<br>電源残量: ${s.power}%`);
-    L.polyline([[currentLat,currentLng],[s.lat,s.lng]],{color:'#FF9800',weight:4,opacity:0.6,dashArray:'10,6'}).addTo(map);
+    .bindPopup(popupContent);
+    // ルートの色を平常時の緑に変更
+    L.polyline([[currentLat,currentLng],[s.lat,s.lng]],{color:'#4CAF50',weight:4,opacity:0.6,dashArray:'10,6'}).addTo(map);
 });
 
 // 距離計算
