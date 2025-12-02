@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔵 - 災害時モード</title>
+<link rel="stylesheet" href="disaster-map.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body {
+    font-family: "Toppan Headline Gothic","Noto Sans JP",sans-serif;
+    background: #fff3e0;
+    margin: 0; padding: 0;
+    color: #333;
+    scroll-behavior: smooth;
+}
+header {
+    background: #D84315;
+    padding: 20px 16px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    position: sticky; top:0; z-index:999;
+}
+header img { width: 100px; margin-bottom: 10px; }
+header h1 { font-size: 2em; margin: 0; font-weight: 700; text-shadow:0 2px 6px rgba(0,0,0,0.3); }
+
+/* 目次ボタン */
+.toc {
+    display: flex; justify-content: space-around;
+    margin: 16px 0;
+    flex-wrap: wrap;
+    position: sticky; top:90px; background: #fff3e0; padding:8px 0; z-index:998;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.toc button {
+    background: linear-gradient(135deg,#FF5722,#FF8A65);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    margin: 4px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    transition: all 0.4s ease;
+}
+.toc button:hover { transform: translateY(-3px) scale(1.08) rotateZ(-2deg); }
+
+/* メインコンテンツ */
+.main-content { padding: 0 20px 60px; max-width: 720px; margin: 0 auto; }
+
+/* カード */
+.card {
+    background: linear-gradient(145deg,#fff3e0,#ffe0b2);
+    border-radius: 20px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.2);
+    padding: 28px;
+    margin-bottom: 30px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s ease-out;
+    position: relative;
+}
+.card h2 { color: #E64A19; margin-top: 0; font-size: 1.75em; display: flex; align-items: center; gap:10px; text-shadow:0 1px 3px rgba(0,0,0,0.2); }
+.card p { margin: 12px 0 0; line-height: 1.6; color: #555; }
+#map { width: 100%; height: 450px; border-radius: 16px; margin-top: 12px; }
+
+/* メーター */
+.meter-container { margin:6px 0; }
+.meter-label { font-size:0.85em; color:#333; margin-bottom:2px; }
+.meter {
+    height: 20px;
+    background: #eee;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.meter > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 12px;
+    transition: width 1.2s ease-in-out;
+}
+.meter-stock > span { background: #4CAF50; } /* 緑：備蓄 */
+.meter-power > span { background: #FF9800; } /* オレンジ：電源 */
+
+/* フェードイン */
+.card.visible { opacity:1; transform: translateY(0); }
+
+@media screen and (max-width: 480px){
+    header h1 { font-size: 1.6em; }
+    .card { padding: 20px; }
+    .card h2 { font-size: 1.5em; }
+    #map { height: 350px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <img src="kura_image.png" alt="蔵ロゴ">
+    <h1>災害発生！近くの蔵を確認</h1>
+</header>
+
+<div class="toc">
+    <button onclick="scrollToCard('mapcard')"><i class="fas fa-map-marked-alt"></i> 蔵マップ</button>
+    <button onclick="scrollToCard('status')"><i class="fas fa-tachometer-alt"></i> 備蓄状況</button>
+</div>
+
+<div class="main-content">
+    <div class="card" id="mapcard">
+        <h2><i class="fas fa-map-marked-alt"></i> 蔵マップ</h2>
+        <p>災害時、解放されている蔵の位置やハザード情報を確認できます。マーカーをクリックすると備蓄・電源メーターを表示。</p>
+        <div id="map"></div>
+    </div>
+
+    <div class="card" id="status">
+        <h2><i class="fas fa-tachometer-alt"></i> 蔵状況リスト</h2>
+        <div id="storeList"></div>
+    </div>
+</div>
+
+<footer>&copy; 2025 蔵アプリ All Rights Reserved.</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// スクロールアニメーション
+function scrollToCard(id){
+    const target = document.getElementById(id);
+    const startPos = window.pageYOffset;
+    const targetPos = target.getBoundingClientRect().top + startPos - 80;
+    const distance = targetPos - startPos;
+    let startTime = null;
+    function animation(currentTime){
+        if(startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const run = easeInOutCubic(timeElapsed, startPos, distance, 700);
+        window.scrollTo(0,run);
+        if(timeElapsed < 700) requestAnimationFrame(animation);
+    }
+    function easeInOutCubic(t,b,c,d){
+        t/=d/2;
+        if(t<1) return c/2*t*t*t + b;
+        t-=2;
+        return c/2*(t*t*t+2)+b;
+    }
+    requestAnimationFrame(animation);
+}
+
+// カードフェードイン
+function animateCards(){
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card,i)=>{
+        setTimeout(()=>{ card.classList.add('visible'); }, i*300);
+    });
+}
+animateCards();
+
+// ----- マップ -----
+var map = L.map('map').setView([35.6935,139.7330],16);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+// ハザードエリア例（半透明）
+var hazardLayer = L.layerGroup().addTo(map);
+var hazardAreas = [
+    L.polygon([[35.6927,139.7324],[35.6927,139.7334],[35.6934,139.7334],[35.6934,139.7324]], {color:'#FF3D00', fillColor:'#FF3D00', fillOpacity:0.3}),
+    L.polygon([[35.6938,139.7330],[35.6938,139.7340],[35.6944,139.7340],[35.6944,139.7330]], {color:'#FF3D00', fillColor:'#FF3D00', fillOpacity:0.3})
+];
+hazardAreas.forEach(a=>hazardLayer.addLayer(a));
+
+// 蔵情報
+var stores = [
+    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, stock: 80, power: 60 },
+    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 45, power: 90 },
+    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 50 }
+];
+
+// 現在位置
+var currentLat = 35.6935, currentLng = 139.7330;
+const userMarker = L.marker([currentLat,currentLng], {
+    icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:22px;transform:rotate(0deg);"></i>'})
+}).addTo(map).bindPopup("あなたの現在位置");
+
+// 蔵マーカー＋ルート＋クリックでメーター表示
+stores.forEach(s=>{
+    const marker = L.marker([s.lat,s.lng]).addTo(map)
+    .bindPopup(`<b>${s.name}</b><br>距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m
+    <div class="meter-container"><div class="meter-label">備蓄残量</div><div class="meter meter-stock"><span style="width:0%" data-width="${s.stock}"></span></div></div>
+    <div class="meter-container"><div class="meter-label">電源残量</div><div class="meter meter-power"><span style="width:0%" data-width="${s.power}"></span></div></div>`);
+
+    marker.on('click',()=>{
+        const meters = marker.getPopup().getElement().querySelectorAll('.meter span');
+        meters.forEach(m=>{
+            m.style.width = m.dataset.width+'%';
+        });
+    });
+
+    animatePolyline([[currentLat,currentLng],[s.lat,s.lng]]);
+});
+
+// 下部リスト（距離順）
+const storeList = document.getElementById('storeList');
+stores.sort((a,b)=>computeDistance(currentLat,currentLng,a.lat,a.lng)-computeDistance(currentLat,currentLng,b.lat,b.lng));
+stores.forEach(s=>{
+    const dist = computeDistance(currentLat,currentLng,s.lat,s.lng);
+    const div = document.createElement('div');
+    div.style.marginBottom='12px';
+    div.style.padding='6px';
+    div.style.background='#fff3e0';
+    div.style.borderRadius='12px';
+    div.style.boxShadow='0 3px 10px rgba(0,0,0,0.12)';
+    div.innerHTML = `<b>${s.name}</b> - 距離: ${dist}m`;
+    storeList.appendChild(div);
+});
+
+// 距離計算
+function computeDistance(lat1,lng1,lat2,lng2){
+    var R = 6371000;
+    var dLat = (lat2-lat1)*Math.PI/180;
+    var dLng = (lng2-lng1)*Math.PI/180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    var c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    return Math.round(R*c);
+}
+
+// ポリラインアニメーション
+function animatePolyline(latlngs){
+    let line = L.polyline([latlngs[0]],{color:'#FF9800',weight:4,opacity:0.7,dashArray:'10,6'}).addTo(map);
+    let steps = 60;
+    let i=1;
+    function step(){
+        if(i>steps) return;
+        let lat = latlngs[0][0]+(latlngs[1][0]-latlngs[0][0])*i/steps;
+        let lng = latlngs[0][1]+(latlngs[1][1]-latlngs[0][1])*i/steps;
+        line.setLatLngs([latlngs[0],[lat,lng]]);
+        i++;
+        requestAnimationFrame(step);
+    }
+    step();
+}
+</script>
+</body>
+</html>

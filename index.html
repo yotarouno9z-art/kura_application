@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔵 - 防災備蓄アプリ</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ===== フォント ===== */
+body {
+    font-family: "Toppan Headline Gothic", "Noto Sans JP", sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    overflow-x: hidden;
+}
+
+/* ===== フェードアニメーション ===== */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.fade-in {
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+/* ===== ヘッダー ===== */
+header {
+    background: #fff;
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+header img {
+    width: 100px;
+    margin-bottom: 12px;
+}
+
+header h1 {
+    font-size: 2em;
+    margin: 0;
+    color: #4CAF50;
+}
+
+/* ===== 概要カード ===== */
+.main-content {
+    padding: 20px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    line-height: 1.7;
+}
+
+.card h2 {
+    color: #f76707;
+    margin-top: 0;
+    font-size: 1.5em;
+}
+
+/* ===== スタートボタン ===== */
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.button-group button {
+    flex: 1 1 48%;
+    margin: 8px 0;
+    padding: 16px 0;
+    font-size: 1.25em;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    font-family: "Toppan Headline Gothic", sans-serif;
+}
+
+.button-group button:hover {
+    transform: translateY(-3px) scale(1.03);
+}
+
+/* 平常時ボタン（緑） */
+#normalBtn {
+    background: #4CAF50;
+}
+
+/* 災害時ボタン（オレンジ） */
+#disasterBtn {
+    background: #f76707;
+}
+
+/* ===== フッター ===== */
+footer {
+    text-align: center;
+    padding: 14px 0;
+    font-size: 0.9em;
+    color: #777;
+}
+
+/* ===== モバイル対応 ===== */
+@media screen and (max-width: 480px) {
+    header h1 { font-size: 1.6em; }
+    .card { padding: 16px 18px; }
+    .button-group button { font-size: 1.1em; padding: 14px 0; }
+}
+</style>
+</head>
+<body class="fade-in">
+
+<header>
+    <img src="kura_image.png" alt="蔵ロゴ">
+    <h1>「蔵」で備蓄しよう！</h1>
+</header>
+
+<div class="main-content">
+    <div class="card">
+        <h2>アプリ概要</h2>
+        <p>「蔵」は空き家を活用した防災備蓄拠点アプリです。</p>
+        <ul>
+            <li>平常時：ラウンジ利用、情報マップ、スマートキー、ポイント制度など</li>
+            <li>災害時：近くの蔵の表示、ハザードマップ、備蓄残量・電源残量の確認</li>
+        </ul>
+        <p>蔵を活用して、日常から災害まで、みんなで備えましょう！</p>
+    </div>
+
+    <div class="button-group">
+        <button id="normalBtn">平常時モード</button>
+        <button id="disasterBtn">災害時モード</button>
+    </div>
+</div>
+
+<footer>
+    &copy; 2025 蔵アプリ All Rights Reserved.
+</footer>
+
+<script>
+// フェードアウトしてページ遷移
+function navigateWithFade(url) {
+    document.body.classList.remove('fade-in');
+    document.body.classList.add('fade-out');
+    setTimeout(() => {
+        window.location.href = url;
+    }, 500); // CSSのtransition時間に合わせる
+}
+
+// ボタンにイベント
+document.getElementById('normalBtn').addEventListener('click', () => {
+    navigateWithFade('normal.html');
+});
+
+document.getElementById('disasterBtn').addEventListener('click', () => {
+    navigateWithFade('disaster.html');
+});
+</script>
+
+</body>
+</html>

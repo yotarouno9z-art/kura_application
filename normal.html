@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔵 - 平常時モード</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ----- 全体設定 ----- */
+body {
+    font-family: "Toppan Headline Gothic","Noto Sans JP",sans-serif;
+    background: #f0f5f0;
+    margin: 0; padding: 0;
+    color: #333;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+}
+header {
+    background: #fff;
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+header img { width: 100px; margin-bottom: 10px; }
+header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
+
+/* ----- 目次ボタン ----- */
+.toc {
+    display: flex; justify-content: space-around;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+.toc button {
+    background: linear-gradient(135deg,#4CAF50,#81C784);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 4px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    transition: all 0.4s ease;
+}
+.toc button:hover { transform: translateY(-3px) scale(1.07); }
+
+/* ----- メインコンテンツ ----- */
+.main-content { padding: 0 20px 60px; max-width: 720px; margin: 0 auto; }
+
+/* ----- カード ----- */
+.card {
+    background: linear-gradient(145deg,#e8f5e9,#ffffff);
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    padding: 28px;
+    margin-bottom: 30px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s ease-out;
+    position: relative;
+}
+.card h2 { color: #2E7D32; margin-top: 0; font-size: 1.75em; display: flex; align-items: center; gap:10px; }
+.card p { margin: 12px 0 0; line-height: 1.6; color: #555; }
+.card button, .card select, .card input[type="date"], .card input[type="time"] {
+    margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+    border: none; cursor: pointer; font-weight: bold; transition: all 0.3s ease;
+}
+.card button { background: #4CAF50; color: white; position: relative; overflow: hidden; }
+.card button:hover { background: #388E3C; transform: scale(1.05) rotateZ(-1deg); }
+.card select, .card input { width: 100%; max-width: 250px; margin-right:10px; }
+
+/* ----- マップ ----- */
+#map { width: 100%; height: 380px; border-radius: 16px; margin-top: 12px; }
+
+/* ----- ポイントアニメーション ----- */
+#currentPoints { font-weight: bold; color:#4CAF50; transition: all 0.6s ease; }
+
+/* ----- フェードイン ----- */
+.card.visible { opacity:1; transform: translateY(0); }
+
+/* ----- ボタン光アニメーション ----- */
+.card button:after {
+    content: "";
+    position: absolute;
+    width: 100%; height: 100%;
+    top:0; left:-100%;
+    background: rgba(255,255,255,0.3);
+    transform: skewX(-20deg);
+    transition: all 0.6s;
+}
+.card button:hover:after { left:100%; }
+
+/* ----- メディア ----- */
+@media screen and (max-width: 480px) {
+    header h1 { font-size: 1.6em; }
+    .card { padding: 20px; }
+    .card h2 { font-size: 1.5em; }
+    #map { height: 280px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <img src="kura_image.png" alt="蔵ロゴ">
+    <h1>平常時モード</h1>
+</header>
+
+<div class="toc">
+    <button onclick="scrollToCard('smartkey')"><i class="fas fa-key"></i> スマートキー</button>
+    <button onclick="scrollToCard('lounge')"><i class="fas fa-calendar-check"></i> ラウンジ予約</button>
+    <button onclick="scrollToCard('mapcard')"><i class="fas fa-map-marked-alt"></i> 情報マップ</button>
+    <button onclick="scrollToCard('points')"><i class="fas fa-star"></i> ポイント履歴</button>
+</div>
+
+<div class="main-content">
+    <!-- スマートキー -->
+    <div class="card" id="smartkey">
+        <h2><i class="fas fa-key"></i> スマートキー</h2>
+        <p>空き家のドアノブにスマホを近づけてロックを解除。</p>
+        <button onclick="unlockDoor(this)"><i class="fas fa-door-open"></i> 解錠</button>
+    </div>
+
+    <!-- ラウンジ予約 -->
+    <div class="card" id="lounge">
+        <h2><i class="fas fa-calendar-check"></i> ラウンジ予約</h2>
+        <p>利用日、時間、蔵の場所を指定して予約できます。</p>
+        <label>日付: <input type="date" id="reserveDate"></label><br>
+        <label>時間: <input type="time" id="reserveTime"></label><br>
+        <label>場所: 
+            <select id="reservePlace">
+                <option value="市ヶ谷駅前">蔵（市ヶ谷駅前）</option>
+                <option value="市ヶ谷公園南">蔵（市ヶ谷公園南）</option>
+                <option value="市ヶ谷交差点">蔵（市ヶ谷交差点付近）</option>
+            </select>
+        </label><br>
+        <button onclick="reserveLounge()">予約する</button>
+    </div>
+
+    <!-- 情報マップ -->
+    <div class="card" id="mapcard">
+        <h2><i class="fas fa-map-marked-alt"></i> 情報マップ</h2>
+        <p>近隣の蔵の場所を確認できます。</p>
+        <div id="map"></div>
+    </div>
+
+    <!-- ポイント履歴 -->
+    <div class="card" id="points">
+        <h2><i class="fas fa-star"></i> ポイント履歴</h2>
+        <p>現在のポイント: <span id="currentPoints">120</span>pt</p>
+        <button onclick="alert('ポイント履歴詳細表示')">詳細を見る</button>
+    </div>
+</div>
+
+<footer>&copy; 2025 蔵アプリ All Rights Reserved.</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ----- 目次スクロール -----
+function scrollToCard(id){
+    const target = document.getElementById(id);
+    const startPos = window.pageYOffset;
+    const targetPos = target.getBoundingClientRect().top + startPos - 20;
+    const distance = targetPos - startPos;
+    let startTime = null;
+    function animation(currentTime){
+        if(startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const run = easeInOutCubic(timeElapsed, startPos, distance, 700);
+        window.scrollTo(0,run);
+        if(timeElapsed < 700) requestAnimationFrame(animation);
+    }
+    function easeInOutCubic(t,b,c,d){
+        t/=d/2;
+        if(t<1) return c/2*t*t*t + b;
+        t-=2;
+        return c/2*(t*t*t+2)+b;
+    }
+    requestAnimationFrame(animation);
+}
+
+// ----- カードフェードイン -----
+function animateCards(){
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card,i)=>{
+        setTimeout(()=>{ card.classList.add('visible'); }, i*300);
+    });
+}
+animateCards();
+
+// ----- スマートキー -----
+function unlockDoor(btn){
+    btn.innerHTML='<i class="fas fa-door-open"></i> 解錠中...';
+    setTimeout(()=>{ btn.innerHTML='<i class="fas fa-door-open"></i> 解錠完了！'; },1000);
+}
+
+// ----- 予約 -----
+function reserveLounge(){
+    const date = document.getElementById('reserveDate').value;
+    const time = document.getElementById('reserveTime').value;
+    const place = document.getElementById('reservePlace').value;
+    alert(`予約完了: ${date} ${time} ${place}`);
+    // ポイントアニメーション
+    let points = parseInt(document.getElementById('currentPoints').innerText);
+    points += 10;
+    let count=0;
+    const interval = setInterval(()=>{
+        document.getElementById('currentPoints').innerText = points-10+count;
+        count++;
+        if(count>10) clearInterval(interval);
+    },50);
+}
+
+// ----- Leafletマップ -----
+var map = L.map('map').setView([35.6935,139.7330],16);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+// 蔵情報
+var stores = [
+    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, stock: 80, power: 60 },
+    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 45, power: 90 },
+    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 50 }
+];
+
+// 現在位置
+var currentLat = 35.6935, currentLng = 139.7330;
+const userMarker = L.marker([currentLat,currentLng], {
+    icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:20px;transform:rotate(0deg);"></i>'})
+}).addTo(map).bindPopup("あなたの現在位置");
+
+// 蔵マーカー＋ルート＋備蓄表示
+stores.forEach(s=>{
+    L.marker([s.lat,s.lng]).addTo(map)
+    .bindPopup(`<b>${s.name}</b><br>距離: ${computeDistance(currentLat,currentLng,s.lat,s.lng)}m
+    <br>備蓄残量: ${s.stock}%<br>電源残量: ${s.power}%`);
+    L.polyline([[currentLat,currentLng],[s.lat,s.lng]],{color:'#FF9800',weight:4,opacity:0.6,dashArray:'10,6'}).addTo(map);
+});
+
+// 距離計算
+function computeDistance(lat1,lng1,lat2,lng2){
+    var R = 6371000;
+    var dLat = (lat2-lat1)*Math.PI/180;
+    var dLng = (lng2-lng1)*Math.PI/180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    var c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    return Math.round(R*c);
+}
+</script>
+</body>
+</html>
