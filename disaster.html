@@ -251,7 +251,7 @@ header h1 { font-size: 2.2em; margin: 0; font-weight: 900; letter-spacing: 1px; 
 
 <header>
     <img src="kura_image.png" alt="蔵ロゴ">
-    <h1>災害発生！緊急マップ</h1>
+    <h1>災害時モード</h1>
     <div id="emergencyAlert"><i class="fas fa-exclamation-circle"></i> 命を守るため、ハザードと備蓄状況を最優先で確認してください</div>
 </header>
 
@@ -282,6 +282,11 @@ header h1 { font-size: 2.2em; margin: 0; font-weight: 900; letter-spacing: 1px; 
                     <span style="background-color:#673AB7; opacity: 0.2; border-color:#673AB7;"></span>
                     <p><i class="fas fa-ship" style="color:#673AB7;"></i> 津波浸水想定区域</p>
                 </div>
+                <div class="legend-item">
+                <span style="background-color:#2E7D32; border-color:#2E7D32;"></span>
+                 <p><i class="fas fa-person-shelter" style="color:#2E7D32;"></i> 避難所</p>
+                </div>
+
                 
                 <h3><i class="fas fa-chart-bar"></i> 蔵の状況メーター凡例</h3>
                 <div class="legend-item">
@@ -331,48 +336,165 @@ function animateCards(){
 }
 
 // ----- マップとデータ -----
-var map = L.map('map').setView([35.6935,139.7330],16);
+var map = L.map('map').setView([35.7045,140.0110],15);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
+//  追加（船橋市浸水想定）
+fetch("data/funabashi_inundation.geojson")
+  .then(response => response.json())
+  .then(geojsonData => {
+    const funabashiInundationLayer = L.geoJSON(geojsonData, {
+      style: function(feature) {
+        return {
+          color: "#0000FF",
+          weight: 1,
+          fillColor: "#0000FF",
+          fillOpacity: 0.25
+        };
+      }
+    });
+    funabashiInundationLayer.addTo(map);
+  })
+  .catch(err => {
+    console.error("浸水想定区域の読み込みエラー:", err);
+  });
+
 var stores = [
-    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, stock: 80, power: 60 },
-    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, stock: 25, power: 90 }, 
-    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, stock: 70, power: 15 } 
+    { name: '蔵（東町バス停前）', lat: 35.7060, lng: 140.0043, stock: 80, power: 60 },
+    { name: '蔵（東船橋駅北口）', lat: 35.7013, lng: 140.0054, stock: 25, power: 90 }, 
+    { name: '蔵（船橋中野木1丁目）', lat: 35.7016, lng: 140.0121, stock: 70, power: 15 } 
 ];
-var currentLat = 35.6935, currentLng = 139.7330;
+var currentLat = 35.7045, currentLng = 140.0094;
 L.marker([currentLat,currentLng], {
     icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:22px;transform:rotate(0deg);"></i>'})
 }).addTo(map).bindPopup("あなたの現在位置");
 
+// ----- 避難所データ -----
+var shelters = [
+  { name: '前原中学校（避難所）', lat: 35.7041, lng: 140.0173 },
+  { name: '中野木小学校（避難所）', lat: 35.7022, lng: 140.0200 }
+];
+
+// ----- 地図にピンを追加(避難所) -----
+shelters.forEach(s => {
+  L.marker([s.lat, s.lng], {
+    icon: L.divIcon({
+      className: "shelter-icon",
+      html: '<i class="fas fa-person-shelter" style="color:#008000;font-size:22px;"></i>'
+    })
+  })
+  .addTo(map)
+  .bindPopup(`<b>${s.name}</b><br>避難所`);
+});
+
+
+
 // ----- NEW: ハザードマップのアイコンとポリゴン -----
 
 // 1. ハザード多角形（エリア）の定義 (変更なし)
+// ----- 現在地周辺ハザードマップ（中心：35.7045, 140.0094） -----
+// ----- 複雑形状のハザードマップ（中心：35.7045, 140.0094）-----
+
 var hazardLayer = L.layerGroup().addTo(map);
+
+var cx = 35.7045;
+var cy = 140.0094;
+
+
+/* ===========================================================
+   1. 洪水ポリゴン（低地が多い南西側を想定。形を複雑に）
+   =========================================================== */
 var floodZone = L.polygon([
-    [35.6950, 139.7300], [35.6970, 139.7320], [35.6940, 139.7340], [35.6920, 139.7320]
-], { color: '#00B0FF', fillColor: '#00B0FF', fillOpacity: 0.4, weight: 1 }).bindPopup("洪水浸水想定区域");
+    [cx + 0.0010, cy - 0.0028],
+    [cx + 0.0022, cy - 0.0020],
+    [cx + 0.0025, cy - 0.0012],
+    [cx + 0.0018, cy - 0.0005],
+    [cx + 0.0008, cy - 0.0001],
+    [cx - 0.0003, cy - 0.0002],
+    [cx - 0.0010, cy - 0.0008],
+    [cx - 0.0015, cy - 0.0018],
+    [cx - 0.0005, cy - 0.0025]
+], {
+    color: '#00B0FF',
+    fillColor: '#00B0FF',
+    fillOpacity: 0.35,
+    weight: 2
+}).bindPopup("洪水浸水想定区域（簡易・複雑形状）");
 hazardLayer.addLayer(floodZone);
+
+
+/* ===========================================================
+   2. 土砂災害（高台方向の北・北西を想定。尾根状の形に）
+   =========================================================== */
 var sedimentArea = L.polygon([
-    [35.6920, 139.7360], [35.6940, 139.7370], [35.6950, 139.7350], [35.6930, 139.7340]
-], { color: '#FF7043', fillColor: '#FF7043', fillOpacity: 0.6, weight: 2 }).bindPopup("土砂災害警戒区域");
+    [cx + 0.0025, cy + 0.0004],
+    [cx + 0.0032, cy + 0.0010],
+    [cx + 0.0038, cy + 0.0022],
+    [cx + 0.0030, cy + 0.0030],
+    [cx + 0.0020, cy + 0.0033],
+    [cx + 0.0012, cy + 0.0025],
+    [cx + 0.0010, cy + 0.0012],
+    [cx + 0.0018, cy + 0.0005]
+], {
+    color: '#FF7043',
+    fillColor: '#FF7043',
+    fillOpacity: 0.50,
+    weight: 2
+}).bindPopup("土砂災害警戒区域（簡易・複雑形状）");
 hazardLayer.addLayer(sedimentArea);
+
+
+/* ===========================================================
+   3. 津波（海側の南東方向。扇形に広がる複雑形状）
+   =========================================================== */
 var tsunamiZone = L.polygon([
-    [35.6910, 139.7310], [35.6930, 139.7300], [35.6900, 139.7330]
-], { color: '#673AB7', fillColor: '#673AB7', fillOpacity: 0.2, weight: 1 }).bindPopup("津波浸水想定区域");
+    [cx - 0.0038, cy + 0.0000],
+    [cx - 0.0042, cy + 0.0012],
+    [cx - 0.0048, cy + 0.0021],
+    [cx - 0.0055, cy + 0.0028],
+    [cx - 0.0062, cy + 0.0022],
+    [cx - 0.0060, cy + 0.0012],
+    [cx - 0.0052, cy + 0.0004],
+    [cx - 0.0045, cy - 0.0002]
+], {
+    color: '#673AB7',
+    fillColor: '#673AB7',
+    fillOpacity: 0.25,
+    weight: 1
+}).bindPopup("津波浸水想定区域（簡易・複雑形状）");
 hazardLayer.addLayer(tsunamiZone);
 
-// 2. NEW: ハザードアイコンの追加（エリアの中心付近に配置）
-L.marker([35.6942, 139.7320], {
-    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-water" style="color:#00B0FF; font-size:30px;"></i>', iconSize: [30, 30]})
-}).addTo(map).bindPopup("洪水危険！");
 
-L.marker([35.6940, 139.7355], {
-    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-mountain" style="color:#FF7043; font-size:30px;"></i>', iconSize: [30, 30]})
-}).addTo(map).bindPopup("土砂災害危険！");
+/* ===========================================================
+   4. ハザードアイコン配置（より中心寄りに）
+   =========================================================== */
 
-L.marker([35.6918, 139.7315], {
-    icon: L.divIcon({className: 'hazard-icon', html: '<i class="fas fa-ship" style="color:#673AB7; font-size:30px;"></i>', iconSize: [30, 30]})
-}).addTo(map).bindPopup("津波危険！");
+// 洪水アイコン（南西）
+L.marker([cx + 0.0005, cy - 0.0018], {
+    icon: L.divIcon({
+        html: '<i class="fas fa-water" style="color:#00B0FF; font-size:32px;"></i>',
+        className: 'hazard-icon'
+    })
+}).addTo(map).bindPopup("洪水危険！（簡易）");
+
+// 土砂アイコン（北）
+L.marker([cx + 0.0025, cy + 0.0020], {
+    icon: L.divIcon({
+        html: '<i class="fas fa-mountain" style="color:#FF7043; font-size:32px;"></i>',
+        className: 'hazard-icon'
+    })
+}).addTo(map).bindPopup("土砂災害危険！（簡易）");
+
+// 津波アイコン（南東）
+L.marker([cx - 0.0045, cy + 0.0015], {
+    icon: L.divIcon({
+        html: '<i class="fas fa-ship" style="color:#673AB7; font-size:32px;"></i>',
+        className: 'hazard-icon'
+    })
+}).addTo(map).bindPopup("津波危険！（簡易）");
+
+
+
 // ------------------------------------
 
 // 蔵マーカー＋ルート＋クリックでメーター表示
