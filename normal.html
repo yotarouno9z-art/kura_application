@@ -7,6 +7,31 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+
+/* === プレミアムカード専用ゴールドデザイン === */
+#premium {
+    background: linear-gradient(135deg, #FFF4C2, #FFD700);
+    border: 2px solid #E6C200;
+    box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+    color: #5A4500;
+}
+
+#premium h2 {
+    color: #A67C00 !important;
+}
+
+#premium button {
+    background: linear-gradient(135deg, #FFD700, #E6C200);
+    color: #fff;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+#premium button:hover {
+    background: linear-gradient(135deg, #FFEA00, #D4B100);
+    transform: scale(1.07);
+}
+
+
 /* ----- 全体設定 ----- */
 body {
     font-family: "Toppan Headline Gothic","Noto Sans JP",sans-serif;
@@ -88,6 +113,28 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
 }
 .toc button:hover { transform: translateY(-3px) scale(1.07); }
 
+
+/* ----- プレミアム用ゴールドボタン ----- */
+.premium-btn {
+    display: flex; justify-content: space-around;
+    margin: 16px 0;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, #FFD700, #DAA520);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 4px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    transition: all 0.4s ease;
+}
+.premium-btn:hover {
+    transform: translateY(-3px) scale(1.07);
+    background: linear-gradient(135deg, #FFEA00, #C89B00);
+}
+
 /* ----- メインコンテンツ ----- */
 .main-content { padding: 0 20px 60px; max-width: 720px; margin: 0 auto; }
 
@@ -156,12 +203,18 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
 
 <div id="dateGreeting"></div>
 
+
 <div class="toc">
     <button onclick="scrollToCard('smartkey')"><i class="fas fa-key"></i> スマートキー</button>
     <button onclick="scrollToCard('lounge')"><i class="fas fa-calendar-check"></i> ラウンジ予約</button>
     <button onclick="scrollToCard('mapcard')"><i class="fas fa-map-marked-alt"></i> 情報マップ</button>
     <button onclick="scrollToCard('points')"><i class="fas fa-star"></i> ポイント履歴</button>
+    <button class="premium-btn" onclick="scrollToCard('premium')"><i class="fas fa-crown"></i> プレミアム</button>
+
 </div>
+
+
+
 
 <div class="main-content">
     <div class="card" id="smartkey">
@@ -177,9 +230,9 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
         <label>時間: <input type="time" id="reserveTime"></label><br>
         <label>場所: 
             <select id="reservePlace">
-                <option value="市ヶ谷駅前">蔵（市ヶ谷駅前）</option>
-                <option value="市ヶ谷公園南">蔵（市ヶ谷公園南）</option>
-                <option value="市ヶ谷交差点">蔵（市ヶ谷交差点付近）</option>
+                <option value="東町バス停前">蔵（東町バス停前）</option>
+                <option value="東船橋駅北口">蔵（東船橋駅北口）</option>
+                <option value="船橋中野木1丁目">蔵（船橋中野木1丁目）</option>
             </select>
         </label><br>
         <button onclick="reserveLounge()">予約する</button>
@@ -196,6 +249,22 @@ header h1 { font-size: 2em; margin: 0; color: #4CAF50; font-weight: 700; }
         <p>現在のポイント: <span id="currentPoints">120</span>pt</p>
         <button onclick="alert('ポイント履歴詳細表示')">詳細を見る</button>
     </div>
+
+    <div class="card" id="premium">
+    <h2><i class="fas fa-crown"></i> プレミアム会員</h2>
+    <p>プレミアム会員限定の機能や特典を利用できます。</p>
+    <p>①会員は自宅から一番近い＜蔵＞に備蓄品を確保</p>
+    <p>②２階会員スペースはどの＜蔵＞も使用可能</p>
+    <p>③一部飲食物の無料サービス​</p>
+    <p>④地域クーポン・防災グッズ交換</p>
+
+
+
+    <button onclick="alert('クレジットカード情報を入力してください')">
+        <i class="fas fa-arrow-circle-right"></i> 加入する
+    </button>
+</div>
+
 </div>
 
 <footer>&copy; 2025 蔵アプリ All Rights Reserved.</footer>
@@ -286,18 +355,18 @@ function reserveLounge(){
 }
 
 // ----- Leafletマップ -----
-var map = L.map('map').setView([35.6935,139.7330],16);
+var map = L.map('map').setView([35.7045,140.0094],15);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
 // 蔵情報（設備と混雑人数）
 var stores = [
-    { name: '蔵（市ヶ谷駅前）', lat: 35.6925, lng: 139.7329, facilities: ['Wi-Fi', 'カフェ', 'ボードゲーム'], crowd: 5 },
-    { name: '蔵（市ヶ谷公園南）', lat: 35.6940, lng: 139.7332, facilities: ['Wi-Fi', '自習スペース', 'トイレ'], crowd: 2 },
-    { name: '蔵（市ヶ谷交差点付近）', lat: 35.6930, lng: 139.7340, facilities: ['キッチン', '休憩スペース'], crowd: 12 }
+    { name: '蔵（東町バス停前）', lat: 35.7060, lng: 140.0043, facilities: ['Wi-Fi', 'カフェ', 'ボードゲーム'], crowd: 5 },
+    { name: '蔵（東船橋駅北口）', lat: 35.7013, lng: 140.0054, facilities: ['Wi-Fi', '自習スペース', 'トイレ'], crowd: 2 },
+    { name: '蔵（船橋中野木1丁目）', lat: 35.7016, lng: 140.0121, facilities: ['キッチン', '休憩スペース'], crowd: 12 }
 ];
 
 // 現在位置
-var currentLat = 35.6935, currentLng = 139.7330;
+var currentLat = 35.7045, currentLng = 140.0094;
 const userMarker = L.marker([currentLat,currentLng], {
     icon:L.divIcon({className:'current-pos-icon',html:'<i class="fas fa-location-arrow" style="color:#007BFF;font-size:20px;transform:rotate(0deg);"></i>'})
 }).addTo(map).bindPopup("あなたの現在位置");
