@@ -7,6 +7,38 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+/* ===== 災害情報カード ===== */
+.disaster-info-card {
+    background: #FFCDD2;
+    border-left: 8px solid #D32F2F;
+    padding: 14px 18px;
+    margin: 10px auto 15px;
+    border-radius: 14px;
+    font-weight: bold;
+    font-size: 1.1em;
+    max-width: 90%;
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: quakePulse 1s infinite alternate;
+}
+
+.disaster-info-card i {
+    font-size: 1.4em;
+    color: #B71C1C;
+}
+
+.disaster-info-card .time {
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+/* 点滅（地震アラート） */
+@keyframes quakePulse {
+    from { transform: scale(1); box-shadow: 0 0 10px #F44336; }
+    to { transform: scale(1.015); box-shadow: 0 0 18px #D32F2F; }
+}    
 /* ============================================== */
 /* CSS変数（カスタムプロパティ）の定義 */
 /* ============================================== */
@@ -255,6 +287,12 @@ header h1 { font-size: 2.2em; margin: 0; font-weight: 900; letter-spacing: 1px; 
     <div id="emergencyAlert"><i class="fas fa-exclamation-circle"></i> 命を守るため、ハザードと備蓄状況を最優先で確認してください</div>
 </header>
 
+<div class="disaster-info-card">
+    <i class="fas fa-house-crack"></i> 地震情報：<b>震度5弱</b>を観測
+    <div class="time">（速報）</div>
+</div>
+
+
 <div class="toc">
     <button onclick="scrollToCard('mapcard')"><i class="fas fa-map-marked-alt"></i> 蔵マップ</button>
     <button onclick="scrollToCard('status')"><i class="fas fa-tachometer-alt"></i> 備蓄状況リスト</button>
@@ -335,6 +373,8 @@ function animateCards(){
     });
 }
 
+
+
 // ----- マップとデータ -----
 var map = L.map('map').setView([35.7045,140.0110],15);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -371,8 +411,25 @@ L.marker([currentLat,currentLng], {
 
 // ----- 避難所データ -----
 var shelters = [
-  { name: '前原中学校（避難所）', lat: 35.7041, lng: 140.0173 },
-  { name: '中野木小学校（避難所）', lat: 35.7022, lng: 140.0200 }
+  
+   { name: '中野木小学校（避難所）', lat: 35.7022, lng: 140.0200 },
+    { name: '宮本小学校（避難所）',   lat: 35.6939, lng: 139.9956 },
+    { name: '湊町小学校（避難所）',   lat: 35.6933, lng: 139.9836 },
+    { name: '市場小学校（避難所）',   lat: 35.7003, lng: 139.9907 },
+    { name: '浜町小学校（避難所）',   lat: 35.6829, lng: 139.9913 },
+    { name: '飯山満南小学校（避難所）', lat: 35.7029, lng: 140.0278 },
+    { name: '前原小学校（避難所）',   lat: 35.7039, lng: 140.0209 },
+
+    { name: '前原中学校（避難所）',  lat: 35.7041, lng: 140.0173 },
+    { name: '宮本中学校（避難所）',  lat: 35.6909, lng: 139.9953 },
+    { name: '船橋中学校（避難所）',  lat: 35.7032, lng: 139.9932 },
+    { name: '湊中学校（避難所）',    lat: 35.6920, lng: 139.9817 },
+
+    { name: '船橋市役所（津波一時避難）',          lat: 35.6940, lng: 139.9843 },
+    { name: '船橋市勤労市民センター（避難所）',    lat: 35.7024, lng: 139.9854 },
+    { name: '南部公民館（避難所）',                lat: 35.6879, lng: 139.9888 },
+    { name: 'ふなばし三番瀬環境学習館（津波避難）', lat: 35.6728, lng: 139.9884 },
+    { name: '南部清掃工場（津波一時避難）',        lat: 35.6755, lng: 139.9889 },
 ];
 
 // ----- 地図にピンを追加(避難所) -----
@@ -448,15 +505,19 @@ hazardLayer.addLayer(sedimentArea);
    3. 津波（海側の南東方向。扇形に広がる複雑形状）
    =========================================================== */
 var tsunamiZone = L.polygon([
-    [cx - 0.0038, cy + 0.0000],
-    [cx - 0.0042, cy + 0.0012],
-    [cx - 0.0048, cy + 0.0021],
-    [cx - 0.0055, cy + 0.0028],
-    [cx - 0.0062, cy + 0.0022],
-    [cx - 0.0060, cy + 0.0012],
-    [cx - 0.0052, cy + 0.0004],
-    [cx - 0.0045, cy - 0.0002]
-], {
+     [35.700621,139.972765],
+  [35.694604,139.989760],
+  [35.691792,139.995081],
+  [35.686146,140.001590],
+  [35.684496,140.018785],
+  [35.670296,140.008771],
+  [35.665531,140.001991],
+  [35.663695,139.985740],
+  [35.671783,139.958289],
+  [35.701388,139.949534],
+[35.701388,139.949534],
+] 
+, {
     color: '#673AB7',
     fillColor: '#673AB7',
     fillOpacity: 0.25,
@@ -486,7 +547,7 @@ L.marker([cx + 0.0025, cy + 0.0020], {
 }).addTo(map).bindPopup("土砂災害危険！（簡易）");
 
 // 津波アイコン（南東）
-L.marker([cx - 0.0045, cy + 0.0015], {
+L.marker([35.685065,139.983137], {
     icon: L.divIcon({
         html: '<i class="fas fa-ship" style="color:#673AB7; font-size:32px;"></i>',
         className: 'hazard-icon'
